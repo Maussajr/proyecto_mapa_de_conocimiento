@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Admin Panel</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #f8fafc; --sidebar: #ffffff; --primary: #2563eb; --danger: #ef4444; --success: #22c55e; --border: #e2e8f0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { display: flex; height: 100vh; background: var(--bg); color: #1e293b; }
+
+        /* Sidebar mejorado */
+        nav { width: 280px; background: var(--sidebar); border-right: 1px solid var(--border); padding: 1.5rem; overflow-y: auto; }
+        .logo { color: var(--primary); font-weight: 700; font-size: 1.2rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 10px; }
+        .nav-group { margin-bottom: 1.5rem; }
+        .nav-group-title { font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; margin-bottom: 10px; padding-left: 10px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 15px; color: #64748b; text-decoration: none; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 14px; }
+        .nav-item:hover { background: #f1f5f9; color: var(--primary); }
+        .nav-item.active { background: #eff6ff; color: var(--primary); font-weight: 600; }
+
+        /* Contenido Principal */
+        main { flex: 1; padding: 2rem; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        .btn { padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; border: none; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
+        .btn-post { background: var(--success); color: white; }
+        .btn-post:hover { background: #16a34a; }
+        
+        /* Tabla Dinámica */
+        .card { background: white; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8fafc; padding: 15px; text-align: left; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; border-bottom: 2px solid var(--border); }
+        td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 14px; }
+        .actions { display: flex; gap: 10px; }
+        .btn-del { color: var(--danger); background: none; border: none; cursor: pointer; padding: 5px; border-radius: 5px; }
+        .btn-del:hover { background: #fee2e2; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(15, 23, 42, 0.5); justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background: white; padding: 2rem; border-radius: 15px; width: 450px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; outline: none; }
+        .form-group input:focus { border-color: var(--primary); ring: 2px solid #bfdbfe; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="logo"><i data-lucide="database"></i> USB RESEARCH</div>
+    
+    <div class="nav-group">
+        <p class="nav-group-title">Entidades</p>
+        <div class="nav-item active" onclick="setTable('docentes', 'cedula')"><i data-lucide="users"></i> Docentes</div>
+        <div class="nav-item" onclick="setTable('proyectos', 'id')"><i data-lucide="briefcase"></i> Proyectos</div>
+        <div class="nav-item" onclick="setTable('productos', 'id')"><i data-lucide="package"></i> Productos</div>
+    </div>
+
+    <div class="nav-group">
+        <p class="nav-group-title">Maestras</p>
+        <div class="nav-item" onclick="setTable('aliados', 'nit')"><i data-lucide="handshake"></i> Aliados</div>
+        <div class="nav-item" onclick="setTable('ods', 'id')"><i data-lucide="globe"></i> ODS</div>
+        <div class="nav-item" onclick="setTable('areas-conocimiento', 'id')"><i data-lucide="book"></i> Áreas Conoc.</div>
+        <div class="nav-item" onclick="setTable('lineas-investigacion', 'id')"><i data-lucide="microscope"></i> Líneas Inv.</div>
+    </div>
+</nav>
+
+<main>
+    <div class="header">
+        <div>
+            <h1 id="view-title">Docentes</h1>
+            <p style="color: #64748b; font-size: 14px;">Administración de registros en tiempo real</p>
+        </div>
+        <button class="btn btn-post" onclick="showModal()">
+            <i data-lucide="plus-circle"></i> POST / Crear Nuevo
+        </button>
+    </div>
+
+    <div class="card">
+        <table>
+            <thead><tr id="table-head"></tr></thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
+</main>
+
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <h2 id="modal-title" style="margin-bottom: 1.5rem;">Crear Registro</h2>
+        <form id="dynamic-form">
+            <div id="form-fields"></div>
+            <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+                <button type="button" class="btn" onclick="hideModal()" style="background: #f1f5f9; flex: 1;">Cancelar</button>
+                <button type="submit" class="btn btn-post" style="flex: 2; justify-content: center;">Confirmar POST</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    lucide.createIcons();
+    let currentTable = 'docentes';
+    let currentPK = 'cedula';
+
+    // Configuración de columnas por tabla
+    const tableConfig = {
+        docentes: { cols: ['cedula', 'nombres', 'apellidos', 'cargo'], fields: ['cedula', 'nombres', 'apellidos', 'genero', 'cargo', 'fecha_nacimiento', 'correo', 'telefono', 'url_cvlac', 'fecha_actualizacion', 'escalafon', 'perfil', 'conv_minciencia', 'nacionalidaad'] },
+        proyectos: { cols: ['id', 'titulo', 'presupuesto', 'tipo_financiacion'], fields: ['id', 'titulo', 'resumen', 'presupuesto', 'tipo_financiacion', 'tipo_fondos', 'fecha_inicio'] },
+        aliados: { cols: ['nit', 'razon_social', 'ciudad', 'correo'], fields: ['nit', 'razon_social', 'nombre_contacto', 'correo', 'telefono', 'ciudad'] },
+        ods: { cols: ['id', 'nombre', 'categoria'], fields: ['id', 'nombre', 'categoria'] },
+        productos: { cols: ['id', 'nombre', 'categoria', 'fecha_entrega'], fields: ['id', 'nombre', 'categoria', 'fecha_entrega', 'tipo_producto'] },
+        'areas-conocimiento': { cols: ['id', 'gran_area', 'area', 'disciplina'], fields: ['id', 'gran_area', 'area', 'disciplina'] },
+        'lineas-investigacion': { cols: ['id', 'nombre', 'descripcion'], fields: ['id', 'nombre', 'descripcion'] }
+    };
+
+    function setTable(table, pk) {
+        currentTable = table;
+        currentPK = pk;
+        document.getElementById('view-title').innerText = table.replace('-', ' ').toUpperCase();
+        
+        // Actualizar UI activa
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        
+        loadData();
+    }
+
+    async function loadData() {
+        const head = document.getElementById('table-head');
+        const body = document.getElementById('table-body');
+        
+        // Generar Cabecera
+        head.innerHTML = tableConfig[currentTable].cols.map(c => `<th>${c}</th>`).join('') + '<th>Acciones</th>';
+        
+        try {
+            const res = await fetch(`http://127.0.0.1:8000/${currentTable}`);
+            const data = await res.json();
+            
+            body.innerHTML = data.map(row => `
+                <tr>
+                    ${tableConfig[currentTable].cols.map(c => `<td>${row[c] || ''}</td>`).join('')}
+                    <td class="actions">
+                        <button class="btn-del" onclick="deleteItem('${row[currentPK]}')">
+                            <i data-lucide="trash-2"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        } catch (e) { console.error("Error al cargar:", e); }
+    }
+
+    function showModal() {
+        const container = document.getElementById('form-fields');
+        container.innerHTML = tableConfig[currentTable].fields.map(f => `
+            <div class="form-group">
+                <label>${f.replace('_', ' ').toUpperCase()}</label>
+                <input type="${f.includes('fecha') ? 'date' : (f==='cedula'||f==='id'||f==='nit'||f==='presupuesto') ? 'number' : 'text'}" id="input_${f}" required placeholder="Ingrese ${f}...">
+            </div>
+        `).join('');
+        document.getElementById('modal').style.display = 'flex';
+    }
+
+    function hideModal() { document.getElementById('modal').style.display = 'none'; }
+
+    document.getElementById('dynamic-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const payload = {};
+        tableConfig[currentTable].fields.forEach(f => {
+            let val = document.getElementById(`input_${f}`).value;
+            payload[f] = (document.getElementById(`input_${f}`).type === 'number') ? Number(val) : val;
+        });
+
+        const res = await fetch(`http://127.0.0.1:8000/${currentTable}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+
+        if(res.ok) {
+            hideModal();
+            loadData();
+        } else {
+            alert("Error al crear. Verifica que el ID no esté duplicado.");
+        }
+    };
+
+    async function deleteItem(id) {
+        if(confirm(`¿Confirmar DELETE del registro ${id}?`)) {
+            await fetch(`http://127.0.0.1:8000/${currentTable}/${id}`, { method: 'DELETE' });
+            loadData();
+        }
+    }
+
+    window.onload = loadData;
+</script>
+</body>
+</html>
